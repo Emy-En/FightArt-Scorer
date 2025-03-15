@@ -2,14 +2,10 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import Select, View
+from config import TOKEN, GUILD_ID
 
-# Testing 
-GUILD_ID = discord.Object(id=1350512280395055205)
-
-# TOKEN ---------------------------
-f = open("./token", "r")
-token = f.readline()
-f.close() 
+# GUILD ---------------------------
+GUILD = discord.Object(GUILD_ID)
 
 # BOT ITSELF ----------------------
 # Behaviour
@@ -17,7 +13,7 @@ class Client(commands.Bot):
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
         try:
-            synced = await self.tree.sync(guild=GUILD_ID)
+            synced = await self.tree.sync(guild=GUILD)
             print(f'Synced {len(synced)} commands to main guild!')
         except Exception as e:
             print(f'Error syncing commands...')
@@ -30,7 +26,6 @@ client = Client(command_prefix='!', intents = intents)
 
 
 # SLASH COMMANDS ------------------
-
 class View2(discord.ui.View):
     @discord.ui.select(
         options=[
@@ -45,6 +40,7 @@ class View2(discord.ui.View):
 
 class View(discord.ui.View):
     @discord.ui.select(
+        placeholder="Attack Type!",
         options=[
             discord.SelectOption(label='Traditionnel', value='TRADITIONAL'),
             discord.SelectOption(label='Numérique', value='DIGITAL'), 
@@ -56,12 +52,12 @@ class View(discord.ui.View):
         await interaction.response.send_message(f"Awesome! I like {select.values[0]} too!", view=view2) 
 
 
-@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild = GUILD_ID)
+@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild = GUILD)
 async def attack(interaction: discord.Interaction, victime:str, autresvictimes: str):
     view = View()
     view2 = View2()
     await interaction.response.send_message("Bagart ! Veuillez choisir type d'attaque :", view=view, ephemeral=True)
-    print('woohoo')
+
 
 # RUN BOT -------------------------
-client.run(token)
+client.run(TOKEN)

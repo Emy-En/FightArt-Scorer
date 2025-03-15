@@ -1,5 +1,6 @@
-# Token file
-token
+# Token and test guild file
+config.py
 
-# Virtual env
+# Virtual env and other stuff
+__pycache__/
 venv/
