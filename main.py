@@ -245,7 +245,7 @@ class ModalSizes(discord.ui.Modal):
 
 
 # SLASH COMMANDS ------------------
-@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild = GUILD)
+@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un")
 async def attack(interaction: discord.Interaction, victim:str, othervictims: str = ''):
     # First view for type of attack
     view = FirstView(victim, othervictims, interaction.user.name)
