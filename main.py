@@ -271,9 +271,9 @@ async def attack(interaction: discord.Interaction, victim:str, message:str, atta
 @client.tree.command(name='details', description="Affiche les détails d'une attaque !", guild=GUILD)
 async def details(interaction: discord.Interaction, id:str):
     # First view for type of attack
-    decodedAttack = scorer.decodeId(int(id, 16))
-    embed = (discord.Embed(title="Détails de l'attaque", description=decodedAttack.detailsAttack()))
-    await interaction.response.send_message(embed)
+    decodedAttack = scorer.Attack.decodeId(int(id, 16))
+    embed = discord.Embed(title="Détails de l'attaque", description=decodedAttack.detailsAttack())
+    await interaction.response.send_message(embed=embed)
 
 
 # RUN BOT -------------------------
