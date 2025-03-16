@@ -33,7 +33,7 @@ class finishMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Finish!"
         options=[
-            discord.SelectOption(label='Finish - Rough', value='ROUGH'),
+            discord.SelectOption(label='Finish - Rough', value='ROUGH', default=True),
             discord.SelectOption(label='Finish - Clean/Lined/Lineless', value='CLEAN'), 
         ]
         super().__init__(options=options, placeholder=placeholder, row=0)
@@ -47,7 +47,7 @@ class colorMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Color!"
         options=[
-            discord.SelectOption(label='Color - Uncolored', value='UNCOLORED'),
+            discord.SelectOption(label='Color - Uncolored', value='UNCOLORED', default=True),
             discord.SelectOption(label='Color - Rough', value='ROUGH'),
             discord.SelectOption(label='Color - Clean/Lined/Lineless', value='CLEAN'), 
         ]
@@ -62,7 +62,7 @@ class shadingMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Shading!"
         options=[
-            discord.SelectOption(label='Shading - Unshaded', value='UNSHADED'),
+            discord.SelectOption(label='Shading - Unshaded', value='UNSHADED', default=True),
             discord.SelectOption(label='Shading - Minimal', value='MINIMAL'),
             discord.SelectOption(label='Shading - Fully Shaded', value='FULLY'), 
         ]
@@ -77,7 +77,7 @@ class backgroundMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Background!"
         options=[
-            discord.SelectOption(label='Background - None', value='NONE'),
+            discord.SelectOption(label='Background - None', value='NONE', default=True),
             discord.SelectOption(label='Background - Abstract/Pattern', value='ABSTRACT'),
             discord.SelectOption(label='Background - Props', value='PROPS'), 
             discord.SelectOption(label='Background - Full Scene', value='SCENE'), 
@@ -93,13 +93,16 @@ class backgroundMenu(discord.ui.Select):
 # First view : manages attack type, finish, color, background
 class FirstView(discord.ui.View):
     attack: scorer.Attack = scorer.Attack()
+    file: discord.Attachment
 
-    def __init__(self, victime: str, autresVictimes: str, attaquant: str, timeout = 180):
+    def __init__(self, victime: str, autresVictimes: str, message: str, attaquant: str, attFile: discord.Attachment,timeout = 180):
         super().__init__(timeout=timeout)
         # Attack options
         self.attack.victimePrincipale = victime
         self.attack.autresVictimes = autresVictimes
-        self.attack.attaquant = f'@{attaquant}'
+        self.attack.attaquant = attaquant
+        self.attack.message = message
+        self.file = attFile
 
         # Attack info menu
 
@@ -118,11 +121,11 @@ class FirstView(discord.ui.View):
 
         # Go next to the special frames view if animation
         if self.attack.attackType == scorer.AttackType.ANIMATION:
-            viewNext = framesView(self.attack)
+            viewNext = framesView(self.attack, self.file)
             message = "Bagart! Rentrez le nombre de frames unique de votre animation !"
         # Else, just go next to the basic infos
         else:
-            viewNext = SecondView(self.attack)
+            viewNext = SecondView(self.attack, self.file)
             message = "Bagart! Rentrez les infos basiques de votre attaque !"
         
         await interaction.response.defer()
@@ -132,11 +135,13 @@ class FirstView(discord.ui.View):
 # Optional view for frames
 class framesView(discord.ui.View):
     attack: scorer.Attack = scorer.Attack()
+    file: discord.Attachment
 
-    def __init__(self, attack: scorer.Attack, timeout = 180):
+    def __init__(self, attack: scorer.Attack, file:discord.Attachment, timeout = 180):
         super().__init__(timeout=timeout)
         # Attack options
         self.attack = attack
+        self.file = file
 
     # Button to go next
     @discord.ui.select(
@@ -153,7 +158,7 @@ class framesView(discord.ui.View):
         # Update attack
         self.attack.frames = scorer.UniqueFrames[select.values[0]]
         # Go next to the basic info menus
-        view2 = SecondView(self.attack)
+        view2 = SecondView(self.attack, self.file)
         await interaction.response.defer()
         await interaction.followup.send("Bagart! Rentrez les infos basiques de votre attaque !", view=view2, ephemeral=True)  # New ephemeral
 
@@ -161,8 +166,9 @@ class framesView(discord.ui.View):
 # Second view : manages basic info
 class SecondView(discord.ui.View):
     attack: scorer.Attack
+    file: discord.Attachment
 
-    def __init__(self, attack: scorer.Attack, timeout = 180):
+    def __init__(self, attack: scorer.Attack, file:discord.Attachment, timeout = 180):
         super().__init__(timeout=timeout)
         # Attack options
         self.attack = attack
@@ -170,31 +176,39 @@ class SecondView(discord.ui.View):
         self.add_item(colorMenu())
         self.add_item(shadingMenu())
         self.add_item(backgroundMenu())
+        self.file = file
     
     @discord.ui.button(label="Next", row=4)
     async def callback_button(self, interaction, button):
         # Sends to the last section (modal with character sizes)
-        await interaction.response.send_modal(ModalSizes(self.attack))  # New modal
+        await interaction.response.send_modal(ModalSizes(self.attack, self.file))  # New modal
 
 # Last view : manages validation
 class finalView(discord.ui.View):
     attack: scorer.Attack
+    file: discord.Attachment
 
-    def __init__(self, attack: scorer.Attack, timeout = 180):
+    def __init__(self, attack: scorer.Attack, file:discord.Attachment, timeout = 180):
         super().__init__(timeout=timeout)
         # Attack options
         self.attack = attack
+        self.file = file
     
     @discord.ui.button(label="Valider !")
     async def callback_button(self, interaction, button):
         # Sends the attack FINALLY OMG
-        await interaction.response.send_message(self.attack.attackMessage())  # New ephemeral
+        attackFile = await self.file.to_file(filename="attack.png")
+        embed = discord.Embed(title="Attack!", description=self.attack.message)
+        embed.set_image(url=self.file.url)
+        embed.set_footer(text=f'id: {hex(self.attack.encodeId())}')
+        await interaction.response.send_message(self.attack.attackMessage(), embed=embed)  # New message
 
 
 # Modal : last input from user, manages character sizes
 class ModalSizes(discord.ui.Modal):
     # Attack stored
     attack: scorer.Attack
+    file: discord.Attachment
 
     # Simple shaped character
     simpleShaped = discord.ui.TextInput(
@@ -219,13 +233,14 @@ class ModalSizes(discord.ui.Modal):
 
     # Fullbody characters
     fullBody = discord.ui.TextInput(
-        label='Nombre de personnages simple-shaped',
+        label='Nombre de personnages full-body',
         placeholder='Entrez le nombre ici...',
         required=False,
     )
 
-    def __init__(self, attack: scorer.Attack):
+    def __init__(self, attack: scorer.Attack, file: discord.Attachment):
         self.attack = attack
+        self.file = file
         super().__init__(title="Personnages")
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -235,7 +250,7 @@ class ModalSizes(discord.ui.Modal):
             scorer.Characters(scorer.Size.HALF_BODY, int(str(self.halfBody) or 0)),
             scorer.Characters(scorer.Size.FULL_BODY, int(str(self.fullBody) or 0))
         ]
-        lastView = finalView(self.attack)
+        lastView = finalView(self.attack, self.file)
         embed = (discord.Embed(title="Détails de l'attaque", description=self.attack.detailsAttack()))
         await interaction.response.send_message('On y est presque!', view=lastView, embed=embed, ephemeral=True)
 
@@ -245,11 +260,21 @@ class ModalSizes(discord.ui.Modal):
 
 
 # SLASH COMMANDS ------------------
-@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un")
-async def attack(interaction: discord.Interaction, victim:str, othervictims: str = ''):
+# Attack command - to attack
+@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild=GUILD)
+async def attack(interaction: discord.Interaction, victim:str, message:str, attackfile:discord.Attachment, othervictims: str = ''):
     # First view for type of attack
-    view = FirstView(victim, othervictims, interaction.user.name)
+    view = FirstView(victim, othervictims, message, interaction.user.id, attackfile)
     await interaction.response.send_message("Bagart ! Rentrez le type de votre attaque !", view=view, ephemeral=True)
+
+# Details command - to see an attack's details
+@client.tree.command(name='details', description="Affiche les détails d'une attaque !", guild=GUILD)
+async def details(interaction: discord.Interaction, id:str):
+    # First view for type of attack
+    decodedAttack = scorer.decodeId(int(id, 16))
+    embed = (discord.Embed(title="Détails de l'attaque", description=decodedAttack.detailsAttack()))
+    await interaction.response.send_message(embed)
+
 
 # RUN BOT -------------------------
 client.run(TOKEN)
