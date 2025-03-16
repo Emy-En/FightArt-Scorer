@@ -2,13 +2,16 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import Select, View, TextInput
-from config import TOKEN, GUILD_ID
 
+import config
 import scorer
 
 
 # GUILD ---------------------------
-GUILD = discord.Object(GUILD_ID)
+if config.TEST:
+    GUILD = discord.Object(config.GUILD_ID)
+else:
+    GUILD = None
 
 # BOT ITSELF ----------------------
 # Behaviour
@@ -277,4 +280,4 @@ async def details(interaction: discord.Interaction, id:str):
 
 
 # RUN BOT -------------------------
-client.run(TOKEN)
+client.run(config.TOKEN)

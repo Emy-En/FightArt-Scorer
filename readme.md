@@ -31,4 +31,5 @@ Create a config.py file in the source folder, and fill in those informations:
 ```py
 GUILD_ID = # Your main guild ID here for testing
 TOKEN = # Your bot token
+TEST = # True if special to guild, False if global
 ```
