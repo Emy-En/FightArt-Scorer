@@ -53,15 +53,16 @@ class UniqueFrames(Enum): # Pour animation
 # Cette classe stocke des infos sur l'attaque que vous voulez faire
 @dataclass
 class Attack:
-  attackType: AttackType
-  finish: Finish
-  color: Color
-  shading: Shading
-  background: Background
-  characters: list[Size]
+  attackType: AttackType = AttackType.TRADITIONAL
+  finish: Finish = Finish.ROUGH
+  color: Color = Color.UNCOLORED
+  shading: Shading = Shading.UNSHADED
+  background: Background = Background.NONE
+  characters: list[Characters] = field(default_factory=list)
   frames: UniqueFrames = UniqueFrames.PAS_ANIME
-  victimePrincipale: str = 'NAME'
-  autresVictimes: list[str] = field(default_factory=list)
+  attaquant: str = 'NAME1'
+  victimePrincipale: str = 'NAME2'
+  autresVictimes: str = ''
 
   # Cette méthode permet de calculer la moyenne des personnages
   # Le truc moche dans la parenthèse transforme un [Characters(s1, 3), Characters(s2, 1)] en [s1.score, s1.score, s1.score, s2.score] pour faire la moyenne
@@ -71,18 +72,19 @@ class Attack:
 
   # Cette méthode calcule le total de points
   def score(self):
-    # Permet de faire une moyenne des tailles
+    # Permettent de faire une moyenne des tailles puis de calculer
     sizeAvg = self.sizeAvgMultiplier()
+    nbCharacters = sum([i.number for i in self.characters])
     # Si l'attaque est animée alors fully shaded vaut 5 de plus
     shading = self.shading.value
     if self.attackType == AttackType.ANIMATION and self.shading == Shading.FULLY:
       shading += 5
     # Calcul final, somme du finish/color/shading/bg * les multipliers nbCharacters/sizeCharacters/nbFrames
-    return (self.finish.value + self.color.value + shading + self.background.value) * len(self.characters) * sizeAvg * self.frames.value
+    return (self.finish.value + self.color.value + shading + self.background.value) * nbCharacters * sizeAvg * self.frames.value
 
   # Cette méthode affiche le détail de l'attaque
   def detailsAttack(self):
-    print(f"""
+    return f"""
       Type : {self.attackType.name}
       ---------- BASE POINTS ----------
       Finish : {self.finish.name} - {self.finish.value}
@@ -90,21 +92,18 @@ class Attack:
       Shading : {self.shading.name} - {self.shading.value}
       Background : {self.background.name} - {self.background.value}
       ---------- MULTIPLIERS ----------
-      Character number : x{len(self.characters)}
-      Character sizes : {[f'{i.number} {i.size.name}' for i in self.characters]} - average x{self.sizeAvgMultiplier()}
+      Character number : x{sum([i.number for i in self.characters])}
+      Character sizes : {[f'{i.number} {i.size.name}' for i in self.characters]} - avg x{self.sizeAvgMultiplier()}
       Unique Frames : {self.frames.name} - x{self.frames.value}
       ---------------------------------
       TOTAL : {self.score()}
-    """)
+    """
 
   # Cette méthode affiche un petit message à copier pour poster, vous pouvez y mettre les @ discord des gens pour tag + facilement
   def attackMessage(self):
     # Message principal
-    print(f'Attaque sur {self.victimePrincipale} pour un total de {self.score()} points !')
+    message = f'{self.attaquant} attaque {self.victimePrincipale} pour un total de {self.score()} points !'
     # Ajout des victimes secondaires si nécessaire
-    if self.autresVictimes != []:
-      message = 'Aussi une attaque sur ' + self.autresVictimes[0]
-      for i in range(1, len(self.autresVictimes)):
-        message += ', ' + self.autresVictimes[i]
-      message += ' !'
-      print(message)
+    if self.autresVictimes != '':
+      message += f'\nMention spéciale pour: {self.autresVictimes} !'
+    return message
