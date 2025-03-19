@@ -272,14 +272,14 @@ class ModalSizes(discord.ui.Modal):
 
 # SLASH COMMANDS ------------------
 # Attack command - to attack
-@client.tree.command(name='attack', description="(UTILISEZ CELLE LA) C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild=GUILD)
+@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild=GUILD)
 async def attack(interaction: discord.Interaction, victim:str, message:str, attackfile:discord.Attachment, othervictims: str = ''):
     # First view for type of attack
     view = FirstView(victim, othervictims, message, interaction.user.id, attackfile)
     await interaction.response.send_message("Bagart ! Rentrez le type de votre attaque !", view=view, ephemeral=True)
 
 # Details command - to see an attack's details
-@client.tree.command(name='details', description="(UTILISEZ CELLE LA) Affiche les détails d'une attaque !", guild=GUILD)
+@client.tree.command(name='details', description="Affiche les détails d'une attaque !", guild=GUILD)
 async def details(interaction: discord.Interaction, id:str):
     # First view for type of attack
     decodedAttack = scorer.Attack.decodeId(int(id, 16))
