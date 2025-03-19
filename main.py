@@ -9,6 +9,7 @@ import scorer
 
 # GUILD ---------------------------
 if config.TEST:
+    print('is test')
     GUILD = discord.Object(config.GUILD_ID)
 else:
     GUILD = None
@@ -36,13 +37,14 @@ class finishMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Finish!"
         options=[
-            discord.SelectOption(label='Finish - Rough', value='ROUGH', default=True),
+            discord.SelectOption(label='Finish - Rough', value='ROUGH'),
             discord.SelectOption(label='Finish - Clean/Lined/Lineless', value='CLEAN'), 
         ]
         super().__init__(options=options, placeholder=placeholder, row=0)
     
     async def callback(self, interaction):
         self.view.attack.finish = scorer.Finish[self.values[0]]
+        self.view.interactedWith[0] = True
         await interaction.response.defer()
 
 # Menu to select color
@@ -50,14 +52,15 @@ class colorMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Color!"
         options=[
-            discord.SelectOption(label='Color - Uncolored', value='UNCOLORED', default=True),
+            discord.SelectOption(label='Color - Uncolored', value='UNCOLORED'),
             discord.SelectOption(label='Color - Rough', value='ROUGH'),
-            discord.SelectOption(label='Color - Clean/Lined/Lineless', value='CLEAN'), 
+            discord.SelectOption(label='Color - Clean/Painted', value='CLEAN'), 
         ]
         super().__init__(options=options, placeholder=placeholder, row=1)
     
     async def callback(self, interaction):
         self.view.attack.color = scorer.Color[self.values[0]]
+        self.view.interactedWith[1] = True
         await interaction.response.defer()
 
 # Menu to select shading
@@ -65,7 +68,7 @@ class shadingMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Shading!"
         options=[
-            discord.SelectOption(label='Shading - Unshaded', value='UNSHADED', default=True),
+            discord.SelectOption(label='Shading - Unshaded', value='UNSHADED'),
             discord.SelectOption(label='Shading - Minimal', value='MINIMAL'),
             discord.SelectOption(label='Shading - Fully Shaded', value='FULLY'), 
         ]
@@ -73,6 +76,7 @@ class shadingMenu(discord.ui.Select):
     
     async def callback(self, interaction):
         self.view.attack.shading = scorer.Shading[self.values[0]]
+        self.view.interactedWith[2] = True
         await interaction.response.defer()
 
 # Menu to select background
@@ -80,7 +84,7 @@ class backgroundMenu(discord.ui.Select):
     def __init__(self):
         placeholder="Background!"
         options=[
-            discord.SelectOption(label='Background - None', value='NONE', default=True),
+            discord.SelectOption(label='Background - None', value='NONE'),
             discord.SelectOption(label='Background - Abstract/Pattern', value='ABSTRACT'),
             discord.SelectOption(label='Background - Props', value='PROPS'), 
             discord.SelectOption(label='Background - Full Scene', value='SCENE'), 
@@ -89,24 +93,25 @@ class backgroundMenu(discord.ui.Select):
     
     async def callback(self, interaction):
         self.view.attack.background = scorer.Background[self.values[0]]
+        self.view.interactedWith[3] = True
         await interaction.response.defer()
 
 
 # VIEWS AND MODALS ----------------
 # First view : manages attack type, finish, color, background
 class FirstView(discord.ui.View):
-    attack: scorer.Attack = scorer.Attack()
+    attack: scorer.Attack
     file: discord.Attachment
 
     def __init__(self, victime: str, autresVictimes: str, message: str, attaquant: str, attFile: discord.Attachment,timeout = 180):
         super().__init__(timeout=timeout)
         # Attack options
+        self.attack = scorer.Attack()
         self.attack.victimePrincipale = victime
         self.attack.autresVictimes = autresVictimes
         self.attack.attaquant = attaquant
         self.attack.message = message
         self.file = attFile
-
         # Attack info menu
 
     # Button to go next
@@ -137,7 +142,7 @@ class FirstView(discord.ui.View):
 
 # Optional view for frames
 class framesView(discord.ui.View):
-    attack: scorer.Attack = scorer.Attack()
+    attack: scorer.Attack
     file: discord.Attachment
 
     def __init__(self, attack: scorer.Attack, file:discord.Attachment, timeout = 180):
@@ -154,7 +159,7 @@ class framesView(discord.ui.View):
             discord.SelectOption(label='Unique Frames - 6 to 10', value='SIX_A_DIX'),
             discord.SelectOption(label='Unique Frames - 11 to 15', value='ONZE_A_QUINZE'), 
             discord.SelectOption(label='Unique Frames - 16 to 20', value='SEIZE_A_VINGT'), 
-            discord.SelectOption(label='Unique Frames - 20+', value='PLUS_DE_VINGT'), 
+            discord.SelectOption(label='Unique Frames - 20+', value='PLUS_DE_20'), 
         ]
     )
     async def callback_button(self, interaction, select):
@@ -170,6 +175,7 @@ class framesView(discord.ui.View):
 class SecondView(discord.ui.View):
     attack: scorer.Attack
     file: discord.Attachment
+    interactedWith: list
 
     def __init__(self, attack: scorer.Attack, file:discord.Attachment, timeout = 180):
         super().__init__(timeout=timeout)
@@ -180,11 +186,13 @@ class SecondView(discord.ui.View):
         self.add_item(shadingMenu())
         self.add_item(backgroundMenu())
         self.file = file
+        self.interactedWith = [False, False, False, False]
     
     @discord.ui.button(label="Next", row=4)
     async def callback_button(self, interaction, button):
         # Sends to the last section (modal with character sizes)
-        await interaction.response.send_modal(ModalSizes(self.attack, self.file))  # New modal
+        if all(self.interactedWith):
+            await interaction.response.send_modal(ModalSizes(self.attack, self.file))  # New modal
 
 # Last view : manages validation
 class finalView(discord.ui.View):
@@ -264,14 +272,14 @@ class ModalSizes(discord.ui.Modal):
 
 # SLASH COMMANDS ------------------
 # Attack command - to attack
-@client.tree.command(name='attack', description="C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild=GUILD)
+@client.tree.command(name='attack', description="(UTILISEZ CELLE LA) C'est l'heure de la BAGART! Utilisez cette commande pour attaquer quelqu'un", guild=GUILD)
 async def attack(interaction: discord.Interaction, victim:str, message:str, attackfile:discord.Attachment, othervictims: str = ''):
     # First view for type of attack
     view = FirstView(victim, othervictims, message, interaction.user.id, attackfile)
     await interaction.response.send_message("Bagart ! Rentrez le type de votre attaque !", view=view, ephemeral=True)
 
 # Details command - to see an attack's details
-@client.tree.command(name='details', description="Affiche les détails d'une attaque !", guild=GUILD)
+@client.tree.command(name='details', description="(UTILISEZ CELLE LA) Affiche les détails d'une attaque !", guild=GUILD)
 async def details(interaction: discord.Interaction, id:str):
     # First view for type of attack
     decodedAttack = scorer.Attack.decodeId(int(id, 16))
