@@ -209,10 +209,9 @@ class finalView(discord.ui.View):
     async def callback_button(self, interaction, button):
         # Sends the attack FINALLY OMG
         attackFile = await self.file.to_file(filename="attack.png")
-        embed = discord.Embed(title="Attack!", description=self.attack.message)
-        embed.set_image(url=self.file.url)
+        embed = discord.Embed(title="Attack!", description=f'**Score : {self.attack.score():.2f} points!**\n\n {self.attack.message}')
         embed.set_footer(text=f'id: {hex(self.attack.encodeId())}')
-        await interaction.response.send_message(self.attack.attackMessage(), embed=embed)  # New message
+        await interaction.response.send_message(self.attack.attackMessage(), embed=embed, file=attackFile)  # New message
 
 
 # Modal : last input from user, manages character sizes

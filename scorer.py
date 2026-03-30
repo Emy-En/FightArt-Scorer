@@ -118,7 +118,7 @@ class Attack:
     # Cette méthode affiche un petit message à copier pour poster, vous pouvez y mettre les @ discord des gens pour tag + facilement
     def attackMessage(self):
         # Message principal
-        message = f'<@{self.attaquant}> attaque {self.victimePrincipale} pour un total de {self.score():.2f} points !'
+        message = f'<@{self.attaquant}> attaque {self.victimePrincipale} !'
         # Ajout des victimes secondaires si nécessaire
         if self.autresVictimes != '':
             message += f'\nMention spéciale pour: {self.autresVictimes} !\n'
